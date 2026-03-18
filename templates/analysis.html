@@ -23,14 +23,20 @@
 <div class="row mb-5">
     <div class="col-md-6 mb-4">
         <div class="card p-4 h-100">
-            <h4 class="mb-0">Distribución de Defectos</h4>
+            <div class="d-flex justify-content-between align-items-center mb-0">
+                <h4 class="mb-0">Distribución de Defectos</h4>
+                <button class="btn btn-sm btn-outline-secondary py-0 px-2" onclick="toggleFullScreen('hist-chart')" title="Pantalla Completa">⤢</button>
+            </div>
             <p class="text-muted small mb-3">Conoce qué tan comunes son las cifras altas o bajas de defectos en tu planta.</p>
             <div id="hist-chart" style="height: 350px; width: 100%;"></div>
         </div>
     </div>
     <div class="col-md-6 mb-4">
         <div class="card p-4 h-100">
-            <h4 class="mb-0">¿Cuáles variables te causan defectos?</h4>
+            <div class="d-flex justify-content-between align-items-center mb-0">
+                <h4 class="mb-0">¿Cuáles variables te causan defectos?</h4>
+                <button class="btn btn-sm btn-outline-secondary py-0 px-2" onclick="toggleFullScreen('bar-chart')" title="Pantalla Completa">⤢</button>
+            </div>
             <p class="text-muted small mb-3">Las barras hacia la derecha indican que al aumentar la variable, los defectos aumentan. Hacia la izquierda indica que disminuyen.</p>
             <div id="bar-chart" style="height: 350px; width: 100%;"></div>
         </div>
@@ -40,16 +46,37 @@
 <div class="row mb-5">
     <div class="col-md-6 mb-4 mb-md-0">
         <div class="card p-4 h-100">
-            <h4 class="mb-0">Dispersión Contra Mayor Causante</h4>
+            <div class="d-flex justify-content-between align-items-center mb-0">
+                <h4 class="mb-0">Dispersión Contra Mayor Causante</h4>
+                <button class="btn btn-sm btn-outline-secondary py-0 px-2" onclick="toggleFullScreen('scatter-chart')" title="Pantalla Completa">⤢</button>
+            </div>
             <p class="text-muted small mb-3">Observa el detalle de cómo crecen los defectos cuando la variable más crítica cambia.</p>
             <div id="scatter-chart" style="height: 400px; width: 100%;"></div>
         </div>
     </div>
     <div class="col-md-6">
         <div class="card p-4 h-100">
-            <h4 class="mb-0">Heatmap de Correlación General</h4>
-            <p class="text-muted small mb-3">Rojo oscuro = Fuerte correlación positiva (crecen juntas). Azul oscuro = Fuerte correlación negativa (inversas).</p>
+            <div class="d-flex justify-content-between align-items-center mb-0">
+                <h4 class="mb-0">Mapa de Calor por Tipo de Defecto</h4>
+                <button class="btn btn-sm btn-outline-secondary py-0 px-2" onclick="toggleFullScreen('corr-chart')" title="Pantalla Completa">⤢</button>
+            </div>
+            <p class="text-muted small mb-3">Descubre al "culpable". Rojo oscuro indica que una variable dispara un <strong>defecto específico</strong>. Azul oscuro significa que lo reduce.</p>
             <div id="corr-chart" style="height: 400px; width: 100%;"></div>
+        </div>
+    </div>
+</div>
+
+<div class="row mb-5">
+    <div class="col-12">
+        <div class="card p-4">
+            <div class="d-flex justify-content-between align-items-center mb-2">
+                <h4 class="mb-0">Análisis de Calibre (Granulometría) vs Defectos</h4>
+                <button class="btn btn-sm btn-outline-secondary py-0 px-2" onclick="toggleFullScreen('calibre-chart')" title="Pantalla Completa">⤢</button>
+            </div>
+            <p class="text-muted small mb-4">
+                Comparamos el porcentaje de polvo retenido en cada malla durante los <strong>días con menos defectos (Verde)</strong> versus los <strong>días con más problemas (Rojo)</strong>. Si la barra verde es mucho más alta que la roja en una malla, significa que esa retención es ideal.
+            </p>
+            <div id="calibre-chart" style="height: 400px; width: 100%;"></div>
         </div>
     </div>
 </div>
@@ -75,5 +102,10 @@
 
     var corrGraph = {{ graphJSON_corr | safe }};
     Plotly.newPlot('corr-chart', corrGraph.data, corrGraph.layout, {responsive: true});
+    
+    var calibreGraph = {{ graphJSON_calibre | safe }};
+    if (Object.keys(calibreGraph).length !== 0) {
+        Plotly.newPlot('calibre-chart', calibreGraph.data, calibreGraph.layout, {responsive: true});
+    }
 </script>
 {% endblock %}

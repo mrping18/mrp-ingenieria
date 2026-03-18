@@ -43,9 +43,12 @@
                 <hr>
                 
                 <div class="mb-3">
-                    <label class="form-label fw-bold">Función Objetivo</label>
-                    <select class="form-select">
-                        <option>Minimizar Defectos Totales</option>
+                    <label class="form-label fw-bold">Función Objetivo (Minimizar Defecto)</label>
+                    <select class="form-select" name="target_defecto">
+                        <option value="Total_Defectos_Polvo">Todos los Defectos Sumados</option>
+                        {% for d in defectos_cols %}
+                        <option value="{{ d }}">Específico: {{ d }}</option>
+                        {% endfor %}
                     </select>
                 </div>
                 

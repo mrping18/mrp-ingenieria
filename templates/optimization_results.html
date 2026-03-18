@@ -12,7 +12,7 @@
     <!-- Resultado General (Izquierda) -->
     <div class="col-md-5 mb-4 mb-md-0">
         <div class="card p-4 h-100 text-center gradient-card shadow-sm" style="border-top: 5px solid var(--mrp-primary)">
-            <h4 class="mb-4">Defectos Totales Esperados</h4>
+            <h4 class="mb-4">Meta: Minimizar {{ target_defecto }}</h4>
             
             <div class="d-flex justify-content-center align-items-center gap-4 mb-4">
                 <div>
@@ -28,7 +28,9 @@
                 </div>
             </div>
             
-            <p class="small text-muted mb-4 text-start bg-light p-3 rounded">El sistema sugiere que ajustar las variables del proceso hacia los números de la derecha podría reducir la tasa de defectos de manera significativa.</p>
+            <p class="small text-muted mb-4 text-start bg-light p-3 rounded">
+                <strong>Análisis:</strong> El sistema estima una reducción de <strong>{{ defect_reduction }}</strong> incidentes promedios diarios de <em>{{ target_defecto }}</em> si se siguen las condiciones sugeridas.
+            </p>
             
             <div class="mt-auto">
                 <p class="fw-bold mb-2">Para usuarios de Excel:</p>
@@ -43,8 +45,11 @@
     <!-- Valores Sugeridos (Derecha) -->
     <div class="col-md-7">
         <div class="card p-4 h-100 shadow-sm">
-            <h4 class="mb-3">Comparación de Variables</h4>
-            <div class="card p-4">
+            <div class="d-flex justify-content-between align-items-center mb-0">
+                <h4 class="mb-0">Comparación de Variables</h4>
+                <button class="btn btn-sm btn-outline-secondary py-0 px-2" onclick="toggleFullScreen('comp-chart')" title="Pantalla Completa">⤢</button>
+            </div>
+            <div class="card p-3 mt-3">
                 <div id="comp-chart" style="height: 350px; width: 100%;"></div>
             </div>
             

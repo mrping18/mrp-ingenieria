@@ -80,6 +80,7 @@ def upload():
                 
                 app_data['df_merged'] = df_merged
                 app_data['vars_polvo'] = vars_polvo
+                app_data['defectos_cols'] = defects_cols
                 
                 return jsonify({'success': 'Data loaded and merged successfully.', 'rows': len(df_merged)})
             else:
@@ -96,7 +97,9 @@ def analysis():
         return render_template('error.html', message="Primero debe cargar los datos.")
     
     df = app_data['df_merged']
-    vars_to_analyze = app_data['vars_polvo'] + ['Total_Defectos_Polvo']
+    vars_polvo = app_data['vars_polvo']
+    defectos_cols = app_data.get('defectos_cols', [])
+    vars_to_analyze = vars_polvo + ['Total_Defectos_Polvo']
     
     # 1. Descriptive Stats (Translated and Explanatory)
     stats_df = df[vars_to_analyze].describe().round(2)
@@ -113,27 +116,31 @@ def analysis():
     stats_df = stats_df.rename(index=index_map)
     stats = stats_df.to_html(classes='table table-striped table-hover align-middle text-start', justify='left')
     
-    # 2. Correlation Plot (Heatmap)
-    # Fill NaN correlations with 0 just in case to avoid rendering issues
-    corr = df[vars_to_analyze].corr().round(2).fillna(0)
-    fig_corr = px.imshow(corr, text_auto=True, aspect="auto", color_continuous_scale='RdBu_r', 
-                         title="Heatmap de Correlaciones")
+    # 2. Correlation Plot (Heatmap cruzado: Variables vs Defectos)
+    if defectos_cols:
+        corr_matrix = df[vars_polvo + defectos_cols].corr().loc[vars_polvo, defectos_cols].round(2).fillna(0)
+        fig_corr = px.imshow(corr_matrix, text_auto=True, aspect="auto", color_continuous_scale='RdBu_r', 
+                             title="Mapa de Calor: Qué variable impacta qué defecto individual",
+                             labels=dict(x="Tipo de Defecto", y="Variable del Polvo", color="Correlación"))
+    else:
+        corr = df[vars_to_analyze].corr().round(2).fillna(0)
+        fig_corr = px.imshow(corr, text_auto=True, aspect="auto", color_continuous_scale='RdBu_r', 
+                             title="Heatmap de Correlaciones")
     graphJSON_corr = fig_corr.to_json(engine='json')
     
-    # 3. Target Correlation Bar Chart
-    corr_target = corr[['Total_Defectos_Polvo']].drop('Total_Defectos_Polvo').sort_values(by='Total_Defectos_Polvo', ascending=False)
+    # 3. Target Correlation Bar Chart (Total Defects)
+    corr_target = df[vars_polvo + ['Total_Defectos_Polvo']].corr()[['Total_Defectos_Polvo']].drop('Total_Defectos_Polvo').sort_values(by='Total_Defectos_Polvo', ascending=False)
     fig_bar = px.bar(corr_target, x='Total_Defectos_Polvo', y=corr_target.index, orientation='h',
-                     title="Impacto de Variables en Defectos (Correlación)",
+                     title="Impacto de Variables en el Total de Defectos",
                      color='Total_Defectos_Polvo', color_continuous_scale='RdBu_r')
     graphJSON_bar = fig_bar.to_json(engine='json')
     
-    # 4. Scatter Plot for highest correlated variable
+    # 4. Scatter Plot for highest correlated variable against total defects
     if not corr_target.empty:
         top_var = corr_target.abs().sort_values(by='Total_Defectos_Polvo', ascending=False).index[0]
-        # Dropna specifically for these to avoid ols failure plotting
         df_clean = df[[top_var, 'Total_Defectos_Polvo']].dropna()
         fig_scatter = px.scatter(df_clean, x=top_var, y='Total_Defectos_Polvo', trendline="ols",
-                                 title=f"Dispersión Detallada: {top_var} vs Defectos")
+                                 title=f"Dispersión: {top_var} vs Total Defectos")
         graphJSON_scatter = fig_scatter.to_json(engine='json')
     else:
         graphJSON_scatter = "{}"
@@ -143,10 +150,33 @@ def analysis():
                             title='Distribución Histórica de Defectos Totales',
                             color_discrete_sequence=['#8C68CB'])
     graphJSON_hist = fig_hist.to_json(engine='json')
+    
+    # 6. Granulometry Profile (Calibre) Analysis
+    # Filtrar solo mallas para el análisis de calibre
+    mallas = [c for c in df.columns if 'Malla' in c] + ['Fondo']
+    mallas = [m for m in mallas if m in df.columns]
+    
+    if mallas:
+        q25 = df['Total_Defectos_Polvo'].quantile(0.25)
+        q75 = df['Total_Defectos_Polvo'].quantile(0.75)
+        
+        good_days = df[df['Total_Defectos_Polvo'] <= q25][mallas].mean().round(2)
+        bad_days = df[df['Total_Defectos_Polvo'] >= q75][mallas].mean().round(2)
+        
+        import plotly.graph_objects as go
+        fig_calibre = go.Figure()
+        fig_calibre.add_trace(go.Bar(name='Mejores Días (Pocos Defectos)', x=mallas, y=good_days, marker_color='#C6EFCE', text=good_days, textposition='auto'))
+        fig_calibre.add_trace(go.Bar(name='Peores Días (Muchos Defectos)', x=mallas, y=bad_days, marker_color='#FFC7CE', text=bad_days, textposition='auto'))
+        fig_calibre.update_layout(title="Perfil Granulométrico (Calibre): Días Buenos vs Días Malos", barmode='group')
+        
+        graphJSON_calibre = fig_calibre.to_json(engine='json')
+    else:
+        graphJSON_calibre = "{}"
 
     return render_template('analysis.html', stats=stats, 
                            graphJSON_corr=graphJSON_corr, graphJSON_bar=graphJSON_bar,
-                           graphJSON_scatter=graphJSON_scatter, graphJSON_hist=graphJSON_hist)
+                           graphJSON_scatter=graphJSON_scatter, graphJSON_hist=graphJSON_hist,
+                           graphJSON_calibre=graphJSON_calibre)
 
 @app.route('/test_graph')
 def test_graph():
@@ -156,18 +186,21 @@ def test_graph():
     return fig_hist.to_html(full_html=True, include_plotlyjs=True)
 
 @app.route('/optimization', methods=['GET', 'POST'])
-
 def optimization():
     if app_data['df_merged'] is None:
         return render_template('error.html', message="Primero debe cargar los datos.")
     
     df = app_data['df_merged']
     vars_polvo = app_data['vars_polvo']
+    defectos_cols = app_data.get('defectos_cols', [])
     
     if request.method == 'POST':
+        target_defecto = request.form.get('target_defecto', 'Total_Defectos_Polvo')
+        app_data['target_defecto'] = target_defecto
+        
         # Fit model
         X = df[vars_polvo].fillna(df[vars_polvo].mean())
-        y = df['Total_Defectos_Polvo'].fillna(0)
+        y = df[target_defecto].fillna(0)
         
         X_std = X.std()
         cols_to_keep = X_std[X_std > 0].index
@@ -198,8 +231,11 @@ def optimization():
         res = minimize(objective, x0, bounds=bounds_tuple, method='L-BFGS-B')
         
         optimal_values = {v: round(val, 3) for v, val in zip(vars_used, res.x)}
-        expected_defects = round(res.fun, 3)
-        current_defects = round(objective(x0), 3)
+        expected_defects = max(0, round(res.fun, 3))
+        current_defects = max(0, round(objective(x0), 3))
+        
+        target_defects = expected_defects
+        defect_reduction = max(0, round(current_defects - target_defects, 2))
         
         # Create comparison chart
         fig_comp = go.Figure(data=[
@@ -211,15 +247,18 @@ def optimization():
         
         return render_template('optimization_results.html', 
                                optimal_values=optimal_values,
+                               current_defects=current_defects,
+                               expected_defects=expected_defects,
                                defect_reduction=defect_reduction,
-                               target_defects=target_defects,
+                               target_defecto=target_defecto,
                                graphJSON_comp=graphJSON_comp,
                                params=vars_used,
                                bounds=bounds_dict)
                                
     # Request GET
     bounds = {v: {'min': df[v].min(), 'max': df[v].max()} for v in vars_polvo}
-    return render_template('optimization.html', vars=vars_polvo, bounds=bounds)
+    defectos_cols = app_data.get('defectos_cols', [])
+    return render_template('optimization.html', vars=vars_polvo, bounds=bounds, defectos_cols=defectos_cols)
 
 @app.route('/export_solver')
 def export_solver():
@@ -230,6 +269,7 @@ def export_solver():
     vars_polvo = app_data['vars_polvo']
     coefs = app_data['model_coefs']
     bounds = app_data['bounds']
+    target_defecto = app_data.get('target_defecto', 'Total_Defectos_Polvo')
     
     # Exclude constant
     vars_polvo_used = [v for v in bounds.keys()]
@@ -299,57 +339,79 @@ def export_solver():
         worksheet1.set_column(col_num, col_num, 15)
     worksheet1.set_column('O:O', 20)
     
-    # --- SHEET 3: ANALISIS DESCRIPTIVO ---
+    # --- SHEET 2: ANALISIS DESCRIPTIVO ---
     worksheet2 = workbook.add_worksheet('2. CORRELACIONES')
-    worksheet2.merge_range('B2:E3', ' Relación Variable vs Defectos (Correlaciones)', title_format)
+    worksheet2.merge_range('B2:E3', ' Relación Variable vs Tipos de Defectos', title_format)
     worksheet2.set_column('A:A', 5)
     worksheet2.set_column('B:B', 30)
-    worksheet2.set_column('C:C', 20)
-    worksheet2.set_column('D:D', 25)
-    worksheet2.set_column('E:E', 25)
     
-    corr = df_merged[vars_polvo + ['Total_Defectos_Polvo']].corr()
-    corr_target = corr[['Total_Defectos_Polvo']].drop('Total_Defectos_Polvo').sort_values(by='Total_Defectos_Polvo', ascending=False)
-    
-    worksheet2.write('B5', 'Variable del Polvo', header_format)
-    worksheet2.write('C5', 'Fuerza de Relación', header_format)
-    worksheet2.write('D5', '¿Qué Significa?', header_format)
-    
-    row = 6
-    for index, value in corr_target['Total_Defectos_Polvo'].items():
-        worksheet2.write(row-1, 1, index, cell_format)
-        if value > 0.3:
-            worksheet2.write(row-1, 2, value, corr_pos_format)
-            worksheet2.write(row-1, 3, "↗️ Crítico. Si sube, aumentan mucho los defectos.", corr_pos_format)
-        elif value > 0.1:
-            worksheet2.write(row-1, 2, value, cell_format)
-            worksheet2.write(row-1, 3, "↗️ Si sube, aumentan un poco los defectos.", cell_format)
-        elif value < -0.2:
-            worksheet2.write(row-1, 2, value, corr_neg_format)
-            worksheet2.write(row-1, 3, "↘️ Excelente. Si sube, BAJAN los defectos.", corr_neg_format)
-        elif value < -0.1:
-            worksheet2.write(row-1, 2, value, cell_format)
-            worksheet2.write(row-1, 3, "↘️ Si sube, bajan un poco los defectos.", cell_format)
-        else:
-            worksheet2.write(row-1, 2, value, cell_format)
-            worksheet2.write(row-1, 3, "--- Casi no afecta los defectos.", cell_format)
-        worksheet2.set_row(row-1, 30)
-        row += 1
+    defectos_cols = app_data.get('defectos_cols', [])
+    if defectos_cols:
+        worksheet2.write('B5', 'Variable del Polvo', header_format)
+        for col_idx, defecto_name in enumerate(defectos_cols):
+            worksheet2.write(4, 2 + col_idx, defecto_name, header_format)
+            worksheet2.set_column(2 + col_idx, 2 + col_idx, 15)
+            
+        corr_matrix = df_merged[vars_polvo + defectos_cols].corr().loc[vars_polvo, defectos_cols].round(2).fillna(0)
         
-    chart = workbook.add_chart({'type': 'bar'})
-    chart.add_series({
-        'categories': ['2. CORRELACIONES', 5, 1, row-2, 1],
-        'values':     ['2. CORRELACIONES', 5, 2, row-2, 2],
-        'fill':       {'color': '#4472C4'},
-    })
-    chart.set_title ({'name': 'Impacto de Variables en Defectos'})
-    chart.set_x_axis({'name': 'Correlación (Positiva=Malo, Negativa=Bueno)'})
-    chart.set_y_axis({'name': 'Variable', 'reverse': True})
-    chart.set_legend({'none': True})
-    worksheet2.insert_chart('F5', chart, {'x_scale': 1.5, 'y_scale': 1.5})
+        row = 6
+        for var_name in vars_polvo:
+            worksheet2.write(row-1, 1, var_name, cell_format)
+            for col_idx, defecto_name in enumerate(defectos_cols):
+                val = corr_matrix.loc[var_name, defecto_name]
+                if val > 0.3:
+                    fmt = corr_pos_format
+                elif val < -0.2:
+                    fmt = corr_neg_format
+                else:
+                    fmt = cell_format
+                worksheet2.write(row-1, 2 + col_idx, val, fmt)
+            worksheet2.set_row(row-1, 25)
+            row += 1
+            
+        worksheet2.merge_range(f'B{row+2}:E{row+2}', ' Guía de Colores:', subtitle_format)
+        worksheet2.write(row+3, 1, 'Rojo', corr_pos_format)
+        worksheet2.write(row+3, 2, 'Peligro. Si la variable sube, el defecto aumenta fuertemente.')
+        worksheet2.write(row+4, 1, 'Verde', corr_neg_format)
+        worksheet2.write(row+4, 2, 'Excelente. Si la variable sube, el defecto disminuye.')
+    else:
+        worksheet2.write('B5', 'No hay datos de defectos individuales disponibles.', text_format)
     
-    # --- SHEET 4: MODELO Y OPTIMIZACION ---
-    worksheet3 = workbook.add_worksheet('3. OPTIMIZACION_SOLVER')
+    # --- SHEET 3: ANALISIS DE CALIBRE (GRANULOMETRIA) ---
+    worksheet_calibre = workbook.add_worksheet('3. ANALISIS CALIBRE')
+    worksheet_calibre.set_column('A:A', 5)
+    worksheet_calibre.set_column('B:B', 30)
+    worksheet_calibre.set_column('C:E', 20)
+    
+    worksheet_calibre.merge_range('B2:E3', ' Perfil Granulométrico Ideal (Calibre)', title_format)
+    worksheet_calibre.merge_range('B5:E5', ' Promedio histórico de retención en mallas comparando días Buenos vs Malos', text_format)
+    
+    worksheet_calibre.write('B7', 'Malla / Tamiz', header_format)
+    worksheet_calibre.write('C7', 'Retención Ideal (Días Excelentes)', result_format)
+    worksheet_calibre.write('D7', 'Retención Peligrosa (Días Defectuosos)', corr_pos_format)
+    
+    mallas = [c for c in df_merged.columns if 'Malla' in c] + ['Fondo']
+    if mallas:
+        q25 = df_merged['Total_Defectos_Polvo'].quantile(0.25)
+        q75 = df_merged['Total_Defectos_Polvo'].quantile(0.75)
+        good_days = df_merged[df_merged['Total_Defectos_Polvo'] <= q25][mallas].mean().round(2)
+        bad_days = df_merged[df_merged['Total_Defectos_Polvo'] >= q75][mallas].mean().round(2)
+        
+        row_c = 8
+        for malla in mallas:
+            worksheet_calibre.write(row_c-1, 1, malla, cell_format)
+            worksheet_calibre.write(row_c-1, 2, f"{good_days[malla]} %", cell_format)
+            worksheet_calibre.write(row_c-1, 3, f"{bad_days[malla]} %", cell_format)
+            worksheet_calibre.set_row(row_c-1, 20)
+            row_c += 1
+            
+        chart_c = workbook.add_chart({'type': 'column'})
+        chart_c.add_series({'name': 'Retención Ideal', 'categories': ['3. ANALISIS CALIBRE', 7, 1, row_c-2, 1], 'values': ['3. ANALISIS CALIBRE', 7, 2, row_c-2, 2], 'fill': {'color': '#C6EFCE'}})
+        chart_c.add_series({'name': 'Retención Peligrosa', 'categories': ['3. ANALISIS CALIBRE', 7, 1, row_c-2, 1], 'values': ['3. ANALISIS CALIBRE', 7, 3, row_c-2, 3], 'fill': {'color': '#FFC7CE'}})
+        chart_c.set_title({'name': 'Curva Granulométrica (Calibre)'})
+        worksheet_calibre.insert_chart('F7', chart_c, {'x_scale': 1.5, 'y_scale': 1.2})
+        
+    worksheet3 = workbook.add_worksheet('4. OPTIMIZACION_SOLVER')
     worksheet3.set_column('A:A', 5)
     worksheet3.set_column('B:B', 30)
     worksheet3.set_column('C:E', 18)
@@ -383,7 +445,7 @@ def export_solver():
         
     worksheet3.write(row, 1, 'Constante del Modelo', cell_format)
     worksheet3.write(row, 11, coefs['const'])
-    worksheet3.write(row+2, 1, 'DEFECTOS PROYECTADOS:', header_format)
+    worksheet3.write(row+2, 1, f'PROYECTADO ({target_defecto.upper()}):', header_format)
     formula = f"=MAX(0, SUMPRODUCT(C6:C{5+len(vars_polvo_used)}, L6:L{5+len(vars_polvo_used)}) + L{row+1})"
     worksheet3.write_formula(row+2, 2, formula, result_format)
     worksheet3.set_row(row+2, 35)
