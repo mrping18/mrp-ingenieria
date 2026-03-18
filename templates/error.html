@@ -1,0 +1,12 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="row min-vh-50 align-items-center justify-content-center">
+    <div class="col-md-6 text-center">
+        <svg width="64" height="64" viewBox="0 0 24 24" fill="none" class="text-danger mb-4" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="8" x2="12" y2="12"></line><line x1="12" y1="16" x2="12.01" y2="16"></line></svg>
+        <h2 class="mb-3">Algo salió mal</h2>
+        <p class="text-muted lead mb-4">{{ message }}</p>
+        <a href="/" class="btn btn-mrp">Volver al Dashboard</a>
+    </div>
+</div>
+{% endblock %}

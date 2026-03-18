@@ -1,0 +1,108 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-md-8">
+        <div class="card p-5">
+            <h2 class="mb-4">1. Carga de Datos</h2>
+            <p class="text-muted mb-4">Sube tu archivo .xlsx con el registro productivo. Para la demostración, el sistema espera las pestañas "SEGUIMIENTO" y "DEFECTOS".</p>
+            
+            <form id="uploadForm">
+                <div class="mb-4">
+                    <label for="fileUpload" class="form-label fw-bold">Archivo Excel (.xlsx)</label>
+                    <input class="form-control" type="file" id="fileUpload" name="file" accept=".xlsx" required>
+                </div>
+                
+                <button type="submit" class="btn btn-mrp w-100 py-3" id="uploadBtn">
+                    <span id="btnText">Procesar y Cruzar Datos</span>
+                    <span id="btnSpinner" class="spinner-border spinner-border-sm d-none" role="status" aria-hidden="true"></span>
+                </button>
+            </form>
+            
+            <div id="resultMessage" class="alert mt-4 d-none" role="alert"></div>
+            
+            {% if files_loaded > 0 %}
+            <div class="mt-4 pt-4 border-top">
+                <div class="d-flex align-items-center justify-content-between">
+                    <div>
+                        <span class="text-success fw-bold d-block"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="me-1"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path><polyline points="22 4 12 14.01 9 11.01"></polyline></svg> Ya hay un archivo en memoria list.</span>
+                        <small class="text-muted d-block mt-1">¿Deseas cargar uno diferente?</small>
+                    </div>
+                    <div>
+                        <a href="/analysis" class="btn btn-mrp">Ir al Análisis</a>
+                        <button type="button" class="btn btn-danger ms-2" id="clearBtn">
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path><line x1="10" y1="11" x2="10" y2="17"></line><line x1="14" y1="11" x2="14" y2="17"></line></svg> Borrar Memoria
+                        </button>
+                    </div>
+                </div>
+            </div>
+            {% endif %}
+
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.getElementById('uploadForm').addEventListener('submit', function(e) {
+    e.preventDefault();
+    
+    const formData = new FormData();
+    const fileField = document.querySelector('input[type="file"]');
+    
+    if(!fileField.files[0]) return;
+    formData.append('file', fileField.files[0]);
+    
+    const btn = document.getElementById('uploadBtn');
+    const text = document.getElementById('btnText');
+    const spinner = document.getElementById('btnSpinner');
+    const msg = document.getElementById('resultMessage');
+    
+    // UI state
+    btn.disabled = true;
+    text.textContent = ' Procesando...';
+    spinner.classList.remove('d-none');
+    msg.classList.add('d-none');
+    
+    fetch('/upload', {
+        method: 'POST',
+        body: formData
+    })
+    .then(response => response.json())
+    .then(data => {
+        if(data.error) {
+            msg.className = 'alert mt-4 alert-danger';
+            msg.textContent = 'Error: ' + data.error;
+        } else {
+            msg.className = 'alert mt-4 alert-success';
+            msg.innerHTML = `<strong>¡Éxito!</strong> Se cruzaron las bases de datos generando ${data.rows} registros unificados.<br><br><a href="/analysis" class="btn btn-mrp mt-2">Continuar al Análisis</a>`;
+        }
+        msg.classList.remove('d-none');
+    })
+    .catch(error => {
+        msg.className = 'alert mt-4 alert-danger';
+        msg.textContent = 'Error de conexión.';
+        msg.classList.remove('d-none');
+    })
+    .finally(() => {
+        btn.disabled = false;
+        text.textContent = 'Procesar y Cruzar Datos';
+        spinner.classList.add('d-none');
+    });
+});
+
+const clearBtn = document.getElementById('clearBtn');
+if (clearBtn) {
+    clearBtn.addEventListener('click', function() {
+        if(confirm('¿Estás seguro que deseas eliminar los datos de la memoria actual para cargar uno nuevo?')) {
+            fetch('/clear', {method: 'POST'})
+            .then(res => res.json())
+            .then(() => {
+                window.location.reload();
+            });
+        }
+    });
+}
+</script>
+{% endblock %}

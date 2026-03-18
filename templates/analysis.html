@@ -1,0 +1,79 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="row mb-4">
+    <div class="col-12 text-center">
+        <h2>2. Análisis Descriptivo y Exploratorio</h2>
+        <p class="text-muted">Conoce a fondo tus datos antes de optimizar.</p>
+    </div>
+</div>
+
+<div class="row mb-5">
+    <div class="col-12">
+        <div class="card p-4">
+            <h4 class="mb-3">Estadísticos Básicos</h4>
+            <div class="table-responsive">
+                {{ stats|safe }}
+            </div>
+            <small class="text-muted mt-2 d-block">* Los datos mostrados son el cruce entre los promedios de variables de polvo y sumatoria de defectos por cada día.</small>
+        </div>
+    </div>
+</div>
+
+<div class="row mb-5">
+    <div class="col-md-6 mb-4">
+        <div class="card p-4 h-100">
+            <h4 class="mb-0">Distribución de Defectos</h4>
+            <p class="text-muted small mb-3">Conoce qué tan comunes son las cifras altas o bajas de defectos en tu planta.</p>
+            <div id="hist-chart" style="height: 350px; width: 100%;"></div>
+        </div>
+    </div>
+    <div class="col-md-6 mb-4">
+        <div class="card p-4 h-100">
+            <h4 class="mb-0">¿Cuáles variables te causan defectos?</h4>
+            <p class="text-muted small mb-3">Las barras hacia la derecha indican que al aumentar la variable, los defectos aumentan. Hacia la izquierda indica que disminuyen.</p>
+            <div id="bar-chart" style="height: 350px; width: 100%;"></div>
+        </div>
+    </div>
+</div>
+
+<div class="row mb-5">
+    <div class="col-md-6 mb-4 mb-md-0">
+        <div class="card p-4 h-100">
+            <h4 class="mb-0">Dispersión Contra Mayor Causante</h4>
+            <p class="text-muted small mb-3">Observa el detalle de cómo crecen los defectos cuando la variable más crítica cambia.</p>
+            <div id="scatter-chart" style="height: 400px; width: 100%;"></div>
+        </div>
+    </div>
+    <div class="col-md-6">
+        <div class="card p-4 h-100">
+            <h4 class="mb-0">Heatmap de Correlación General</h4>
+            <p class="text-muted small mb-3">Rojo oscuro = Fuerte correlación positiva (crecen juntas). Azul oscuro = Fuerte correlación negativa (inversas).</p>
+            <div id="corr-chart" style="height: 400px; width: 100%;"></div>
+        </div>
+    </div>
+</div>
+
+<div class="text-center">
+    <a href="/optimization" class="btn btn-mrp btn-lg w-25">3. Ir al Optimizador</a>
+</div>
+
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    var histGraph = {{ graphJSON_hist | safe }};
+    Plotly.newPlot('hist-chart', histGraph.data, histGraph.layout, {responsive: true});
+
+    var barGraph = {{ graphJSON_bar | safe }};
+    Plotly.newPlot('bar-chart', barGraph.data, barGraph.layout, {responsive: true});
+    
+    var scatterGraph = {{ graphJSON_scatter | safe }};
+    if (Object.keys(scatterGraph).length !== 0) {
+        Plotly.newPlot('scatter-chart', scatterGraph.data, scatterGraph.layout, {responsive: true});
+    }
+
+    var corrGraph = {{ graphJSON_corr | safe }};
+    Plotly.newPlot('corr-chart', corrGraph.data, corrGraph.layout, {responsive: true});
+</script>
+{% endblock %}

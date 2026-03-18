@@ -1,0 +1,164 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MRP Ingeniería</title>
+    <!-- Bootstrap CSS for layout and modern components -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <!-- Custom styling with requested modern violet/pastel colors -->
+    <style>
+        :root {
+            --mrp-bg: #FDFBFF;
+            --mrp-primary: #8C68CB;
+            --mrp-primary-light: #BCA3E6;
+            --mrp-secondary: #E3D9F5;
+            --mrp-text: #453A5A;
+            --mrp-white: #FFFFFF;
+        }
+        body {
+            background-color: var(--mrp-bg);
+            color: var(--mrp-text);
+            font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+        .navbar-custom {
+            background-color: var(--mrp-white);
+            box-shadow: 0 4px 12px rgba(140, 104, 203, 0.08);
+            border-bottom: 2px solid var(--mrp-secondary);
+        }
+        .navbar-brand {
+            font-weight: 700;
+            color: var(--mrp-primary) !important;
+            letter-spacing: -0.5px;
+        }
+        .nav-link {
+            color: var(--mrp-text) !important;
+            font-weight: 500;
+            padding: 0.5rem 1rem;
+            border-radius: 8px;
+            transition: all 0.2s ease;
+        }
+        .nav-link:hover, .nav-link.active {
+            background-color: var(--mrp-secondary);
+            color: var(--mrp-primary) !important;
+        }
+        .card {
+            border: none;
+            border-radius: 16px;
+            box-shadow: 0 8px 24px rgba(140, 104, 203, 0.05);
+            background: var(--mrp-white);
+            margin-bottom: 1.5rem;
+            transition: transform 0.2s ease;
+        }
+        .card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 12px 32px rgba(140, 104, 203, 0.1);
+        }
+        .btn-mrp {
+            background-color: var(--mrp-primary);
+            color: white;
+            border-radius: 8px;
+            font-weight: 600;
+            border: none;
+            padding: 0.6rem 1.5rem;
+            transition: all 0.2s;
+        }
+        .btn-mrp:hover {
+            background-color: #714DBA;
+            color: white;
+            box-shadow: 0 4px 12px rgba(113, 77, 186, 0.3);
+        }
+        .btn-mrp-outline {
+            background-color: transparent;
+            color: var(--mrp-primary);
+            border: 2px solid var(--mrp-primary);
+            border-radius: 8px;
+            font-weight: 600;
+            padding: 0.5rem 1.4rem;
+            transition: all 0.2s;
+        }
+        .btn-mrp-outline:hover {
+            background-color: var(--mrp-primary);
+            color: white;
+        }
+        h1, h2, h3 {
+            font-weight: 600;
+            color: var(--mrp-primary);
+        }
+        footer {
+            margin-top: auto;
+            text-align: center;
+            padding: 1.5rem 0;
+            color: #8c8c8c;
+            font-size: 0.9rem;
+        }
+        /* Status badge */
+        .status-badge {
+            display: inline-block;
+            padding: 0.35em 0.8em;
+            font-size: 0.85em;
+            font-weight: 600;
+            border-radius: 20px;
+            background-color: var(--mrp-secondary);
+            color: var(--mrp-primary);
+        }
+        .status-badge.success {
+            background-color: #E6F4EA;
+            color: #1E8E3E;
+        }
+        .status-badge.warning {
+            background-color: #FEF7E0;
+            color: #F89C1E;
+        }
+    </style>
+    <!-- Plotly.js 2.35.2 (Soporta bdata de Python 6) -->
+    <script src="https://cdn.plot.ly/plotly-2.35.2.min.js"></script>
+    {% block extra_head %}{% endblock %}
+</head>
+<body>
+
+<nav class="navbar navbar-expand-lg navbar-custom sticky-top">
+    <div class="container">
+        <a class="navbar-brand d-flex align-items-center" href="/">
+            <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" class="me-2" style="color:var(--mrp-primary)"><path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
+            MRP Ingeniería
+        </a>
+        <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navMenu">
+            <span class="navbar-toggler-icon"></span>
+        </button>
+        <div class="collapse navbar-collapse" id="navMenu">
+            <ul class="navbar-nav ms-auto gap-2">
+                <li class="nav-item">
+                    <a class="nav-link {% if request.path == '/' %}active{% endif %}" href="/">Dashboard</a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link {% if request.path == '/upload' %}active{% endif %}" href="/upload">1. Carga de Datos</a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link {% if request.path == '/analysis' %}active{% endif %}" href="/analysis">2. Análisis</a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link {% if request.path == '/optimization' %}active{% endif %}" href="/optimization">3. Optimización</a>
+                </li>
+            </ul>
+        </div>
+    </div>
+</nav>
+
+<div class="container my-5">
+    {% block content %}{% endblock %}
+</div>
+
+<footer>
+    <div class="container">
+        &copy; 2026 MRP Ingeniería. Aplicación web de Data Science para Procesos de Producción.
+    </div>
+</footer>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+{% block extra_js %}{% endblock %}
+</body>
+</html>

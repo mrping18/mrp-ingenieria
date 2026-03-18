@@ -1,0 +1,49 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="row text-center mb-5">
+    <div class="col-12">
+        <h1 class="display-4 fw-bold">Optimizador de Procesos</h1>
+        <p class="lead text-muted">Inteligencia Analítica y Solver Integrado para Ingeniería de Lamosa.</p>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-md-6 mb-4">
+        <div class="card p-4 h-100">
+            <h3>Bienvenido a MRP Ingeniería</h3>
+            <p>Esta aplicación está diseñada para ayudarte a cruzar grandes volúmenes de datos de parámetros de proceso (.xlsx) con resultados de calidad (Defectos).</p>
+            <p>¿Qué puedes hacer aquí?</p>
+            <ul>
+                <li><strong>Cargar datos</strong> de variables del polvo atomizado vs defectos en prensas.</li>
+                <li><strong>Explorar gráficamente</strong> las correlaciones para descubrir problemas de raíz.</li>
+                <li><strong>Simular y Optimizar</strong> mediante algoritmos en Python para encontrar los settings perfectos que minimicen la rotura o el chiteado.</li>
+                <li><strong>Exportar plantillas pre-configuradas</strong> para usar Solver directamente en tu Excel de siempre.</li>
+            </ul>
+            <a href="/upload" class="btn btn-mrp mt-auto w-50">Empezar ahora →</a>
+        </div>
+    </div>
+    
+    <div class="col-md-6 mb-4">
+        <div class="card p-4 h-100 bg-light text-center">
+            <h3>Estado de tu Sesión</h3>
+            <div class="mt-4">
+                <p class="mb-1 text-muted fw-bold text-uppercase" style="font-size: 0.85rem">Archivos .xlsx cargados</p>
+                {% if files_loaded > 0 %}
+                    <span class="status-badge success fs-5 mb-4">1 Archivo en memoria</span>
+                {% else %}
+                    <span class="status-badge warning fs-5 mb-4">0 Archivos</span>
+                {% endif %}
+                
+                <p class="mb-1 text-muted fw-bold text-uppercase" style="font-size: 0.85rem">Estado de Optimización</p>
+                <span class="status-badge fs-5">No ejecutada aún</span>
+            </div>
+            
+            <div class="mt-auto d-flex justify-content-center gap-3">
+                <a href="/analysis" class="btn btn-mrp-outline {% if files_loaded == 0 %}disabled{% endif %}">Ir a Análisis</a>
+                <a href="/optimization" class="btn btn-mrp-outline {% if files_loaded == 0 %}disabled{% endif %}">Ir a Optimización</a>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
