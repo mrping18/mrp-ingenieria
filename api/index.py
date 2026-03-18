@@ -528,6 +528,7 @@ def export_solver():
     
     # --- SHEET 2: CORRELACIONES ---
     worksheet2 = workbook.add_worksheet('2. CORRELACIONES')
+    defectos_cols = app_data.get('defectos_cols', [])
     n_def_cols = len(defectos_cols) if defectos_cols else 0
     last_merge_col = max(4, n_def_cols + 3)
     last_merge_letter = chr(ord('A') + min(last_merge_col, 25))
@@ -535,7 +536,6 @@ def export_solver():
     worksheet2.set_column('A:A', 5)
     worksheet2.set_column('B:B', 30)
     
-    defectos_cols = app_data.get('defectos_cols', [])
     if defectos_cols:
         worksheet2.write('B5', 'Variable del Polvo', header_format)
         for col_idx, defecto_name in enumerate(defectos_cols):
