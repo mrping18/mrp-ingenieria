@@ -428,15 +428,15 @@ def optimization():
 def export_solver():
     if app_data['model_coefs'] is None:
         return "Debe ejecutar la optimización primero.", 400
-        
+    
     df_merged = app_data['df_merged']
     vars_polvo = app_data['vars_polvo']
     coefs = app_data['model_coefs']
     bounds = app_data['bounds']
     target_defecto = app_data.get('target_defecto', 'Total_Defectos_Polvo')
     
-    # Exclude constant
-    vars_polvo_used = [v for v in bounds.keys()]
+    # Only use variables that survived VIF filtering (present in coefs)
+    vars_polvo_used = [v for v in bounds.keys() if v in coefs.index]
     
     output = io.BytesIO()
     import xlsxwriter
@@ -769,7 +769,6 @@ def export_solver():
     writer.close()
     output.seek(0)
     
-    from flask import send_file
     return send_file(output, as_attachment=True, download_name="Modelo_Optimizacion_Polvo.xlsx", 
                      mimetype="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
 
