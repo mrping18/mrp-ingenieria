@@ -1,6 +1,36 @@
 {% extends "base.html" %}
 
 {% block content %}
+{# --- Data Summary Banner --- #}
+<div class="row mb-4">
+    <div class="col-12">
+        <div class="card p-3" style="background: linear-gradient(135deg, var(--mrp-primary) 0%, #5E3BA0 100%); color: white; border-radius: 16px;">
+            <div class="d-flex flex-wrap justify-content-around align-items-center text-center">
+                <div class="px-3 py-2">
+                    <p class="mb-0 small text-uppercase" style="opacity:0.8">Registros</p>
+                    <h3 class="mb-0 fw-bold">{{ data_summary.n_registros }}</h3>
+                </div>
+                <div class="px-3 py-2">
+                    <p class="mb-0 small text-uppercase" style="opacity:0.8">Meses</p>
+                    <h3 class="mb-0 fw-bold">{{ data_summary.n_meses }}</h3>
+                </div>
+                <div class="px-3 py-2">
+                    <p class="mb-0 small text-uppercase" style="opacity:0.8">Variables Analizadas</p>
+                    <h3 class="mb-0 fw-bold">{{ data_summary.n_variables }}</h3>
+                </div>
+                <div class="px-3 py-2">
+                    <p class="mb-0 small text-uppercase" style="opacity:0.8">Defectos Promedio/Día</p>
+                    <h3 class="mb-0 fw-bold">{{ data_summary.defectos_promedio }}</h3>
+                </div>
+                <div class="px-3 py-2">
+                    <p class="mb-0 small text-uppercase" style="opacity:0.8">R² del Modelo</p>
+                    <h3 class="mb-0 fw-bold">{{ model_info.rsquared_pct }}%</h3>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
 <div class="row mb-4">
     <div class="col-12 text-center">
         <h2>2. Análisis Descriptivo y Exploratorio</h2>
@@ -8,18 +38,109 @@
     </div>
 </div>
 
+{# --- Model Info Card --- #}
+<div class="row mb-5">
+    <div class="col-md-6 mb-4">
+        <div class="card p-4 h-100">
+            <h4 class="mb-3">📊 Confiabilidad del Modelo</h4>
+            <div class="d-flex align-items-center gap-3 mb-3">
+                <div class="text-center p-3 rounded" style="background: {% if model_info.rsquared_pct > 50 %}#E6F4EA{% elif model_info.rsquared_pct > 25 %}#FEF7E0{% else %}#FFC7CE{% endif %}; min-width: 100px;">
+                    <p class="mb-0 text-muted small">R²</p>
+                    <h2 class="mb-0 fw-bold">{{ model_info.rsquared_pct }}%</h2>
+                    <p class="mb-0 text-muted" style="font-size:0.7rem">Ajustado: {{ model_info.rsquared_adj_pct }}%</p>
+                </div>
+                <div>
+                    <p class="mb-1"><strong>{{ model_info.nobs }}</strong> observaciones analizadas</p>
+                    <p class="text-muted small mb-0">
+                        {% if model_info.rsquared_pct > 50 %}
+                        ✅ El polvo explica más del 50% de los defectos. Modelo confiable para tomar decisiones.
+                        {% elif model_info.rsquared_pct > 25 %}
+                        ⚠️ El polvo explica el {{ model_info.rsquared_pct }}% de los defectos. Esto es normal: la prensa, moldes, cocción y esmaltado también influyen. Las sugerencias son útiles como guía.
+                        {% else %}
+                        ℹ️ El polvo explica el {{ model_info.rsquared_pct }}% de variabilidad. Esto no significa que la herramienta sea inútil — significa que otros factores (prensa, moldes, cocción) pesan más. Las sugerencias del polvo siguen siendo válidas dentro de su alcance.
+                        {% endif %}
+                    </p>
+                </div>
+            </div>
+            {% if model_info.dropped_vars %}
+            <div class="alert alert-warning py-2 px-3 mb-2 small">
+                <strong>🔧 Multicolinealidad detectada:</strong> Se eliminaron {{ model_info.dropped_vars|length }} variable(s) redundantes para evitar coeficientes inflados:
+                {% for var_name, vif_val in model_info.dropped_vars %}
+                <span class="badge bg-warning text-dark">{{ var_name }} (VIF={{ vif_val }})</span>
+                {% endfor %}
+            </div>
+            {% endif %}
+            {% if model_info.significant_vars %}
+            <div class="mt-2">
+                <p class="small mb-1 fw-bold">Variables estadísticamente significativas (p &lt; 0.05):</p>
+                {% for v in model_info.significant_vars %}
+                <span class="badge bg-primary me-1 mb-1">{{ v }}</span>
+                {% endfor %}
+            </div>
+            {% else %}
+            <div class="mt-2">
+                <p class="small text-muted mb-0">⚡ Ninguna variable individual es significativa (p < 0.05). El efecto del polvo es distribuido entre múltiples variables.</p>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+
+    {% if standards_comparison %}
+    <div class="col-md-6 mb-4">
+        <div class="card p-4 h-100">
+            <h4 class="mb-3">📏 Estándares vs Realidad</h4>
+            <div class="table-responsive" style="max-height: 280px; overflow-y: auto;">
+                <table class="table table-sm table-striped align-middle">
+                    <thead class="sticky-top bg-white">
+                        <tr>
+                            <th>Variable</th>
+                            <th>Estándar Empresa</th>
+                            <th>Promedio Real</th>
+                            <th>Rango Real</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for item in standards_comparison %}
+                        <tr>
+                            <td class="small">{{ item.variable }}</td>
+                            <td class="{% if item.standard != '—' %}fw-bold{% endif %}">{{ item.standard }}</td>
+                            <td>{{ item.mean }}</td>
+                            <td class="small text-muted">{{ item.min }} – {{ item.max }}</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+    {% else %}
+    <div class="col-md-6 mb-4">
+        <div class="card p-4 h-100 d-flex justify-content-center align-items-center bg-light">
+            <p class="text-muted text-center mb-0">
+                <strong>📏 Estándares no detectados.</strong><br>
+                Si tu archivo tiene una hoja "ESTÁNDARES ACTUALES" con columnas "Variable" y "Rango",
+                se compararán automáticamente aquí.
+            </p>
+        </div>
+    </div>
+    {% endif %}
+</div>
+
+{# --- Temporal Trend (Full Width) --- #}
 <div class="row mb-5">
     <div class="col-12">
         <div class="card p-4">
-            <h4 class="mb-3">Estadísticos Básicos</h4>
-            <div class="table-responsive">
-                {{ stats|safe }}
+            <div class="d-flex justify-content-between align-items-center mb-0">
+                <h4 class="mb-0">📈 Tendencia Temporal de Defectos</h4>
+                <button class="btn btn-sm btn-outline-secondary py-0 px-2" onclick="toggleFullScreen('trend-chart')" title="Pantalla Completa">⤢</button>
             </div>
-            <small class="text-muted mt-2 d-block">* Los datos mostrados son el cruce entre los promedios de variables de polvo y sumatoria de defectos por cada día.</small>
+            <p class="text-muted small mb-3">¿Los defectos van mejorando o empeorando? La línea roja punteada es el promedio histórico.</p>
+            <div id="trend-chart" style="height: 350px; width: 100%;"></div>
         </div>
     </div>
 </div>
 
+{# --- Charts Row 1 --- #}
 <div class="row mb-5">
     <div class="col-md-6 mb-4">
         <div class="card p-4 h-100">
@@ -43,6 +164,7 @@
     </div>
 </div>
 
+{# --- Charts Row 2 --- #}
 <div class="row mb-5">
     <div class="col-md-6 mb-4 mb-md-0">
         <div class="card p-4 h-100">
@@ -66,22 +188,20 @@
     </div>
 </div>
 
+{# --- Statistics Table --- #}
 <div class="row mb-5">
     <div class="col-12">
         <div class="card p-4">
-            <div class="d-flex justify-content-between align-items-center mb-2">
-                <h4 class="mb-0">Análisis de Calibre (Granulometría) vs Defectos</h4>
-                <button class="btn btn-sm btn-outline-secondary py-0 px-2" onclick="toggleFullScreen('calibre-chart')" title="Pantalla Completa">⤢</button>
+            <h4 class="mb-3">Estadísticos Descriptivos</h4>
+            <div class="table-responsive">
+                {{ stats|safe }}
             </div>
-            <p class="text-muted small mb-4">
-                Comparamos el porcentaje de polvo retenido en cada malla durante los <strong>días con menos defectos (Verde)</strong> versus los <strong>días con más problemas (Rojo)</strong>. Si la barra verde es mucho más alta que la roja en una malla, significa que esa retención es ideal.
-            </p>
-            <div id="calibre-chart" style="height: 400px; width: 100%;"></div>
+            <small class="text-muted mt-2 d-block">* Los datos mostrados son el cruce entre los promedios de variables de polvo y sumatoria de defectos por cada día.</small>
         </div>
     </div>
 </div>
 
-<div class="text-center">
+<div class="text-center mt-4">
     <a href="/optimization" class="btn btn-mrp btn-lg w-25">3. Ir al Optimizador</a>
 </div>
 
@@ -89,6 +209,9 @@
 
 {% block extra_js %}
 <script>
+    var trendGraph = {{ graphJSON_trend | safe }};
+    Plotly.newPlot('trend-chart', trendGraph.data, trendGraph.layout, {responsive: true});
+
     var histGraph = {{ graphJSON_hist | safe }};
     Plotly.newPlot('hist-chart', histGraph.data, histGraph.layout, {responsive: true});
 
@@ -103,9 +226,5 @@
     var corrGraph = {{ graphJSON_corr | safe }};
     Plotly.newPlot('corr-chart', corrGraph.data, corrGraph.layout, {responsive: true});
     
-    var calibreGraph = {{ graphJSON_calibre | safe }};
-    if (Object.keys(calibreGraph).length !== 0) {
-        Plotly.newPlot('calibre-chart', calibreGraph.data, calibreGraph.layout, {responsive: true});
-    }
 </script>
 {% endblock %}

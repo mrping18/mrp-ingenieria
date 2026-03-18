@@ -28,9 +28,24 @@
                 </div>
             </div>
             
-            <p class="small text-muted mb-4 text-start bg-light p-3 rounded">
+            <p class="small text-muted mb-2 text-start bg-light p-3 rounded">
                 <strong>Análisis:</strong> El sistema estima una reducción de <strong>{{ defect_reduction }}</strong> incidentes promedios diarios de <em>{{ target_defecto }}</em> si se siguen las condiciones sugeridas.
             </p>
+            
+            <div class="text-start bg-light p-3 rounded mb-4">
+                <p class="small mb-1"><strong>📊 Confiabilidad:</strong> R² = <strong>{{ rsquared }}%</strong> (basado en {{ nobs }} observaciones)</p>
+                <p class="small mb-0 text-muted">
+                    {% if rsquared > 50 %}✅ El modelo es confiable para este objetivo.
+                    {% elif rsquared > 25 %}⚠️ Confiabilidad moderada. Otros factores no medidos influyen.
+                    {% else %}❌ R² bajo. Las recomendaciones deben validarse con prueba física.
+                    {% endif %}
+                </p>
+                {% if sig_vars %}
+                <p class="small mt-1 mb-0"><strong>Variables significativas:</strong> 
+                    {% for v, p in sig_vars.items() %}{{ v }} (p={{ p }}){% if not loop.last %}, {% endif %}{% endfor %}
+                </p>
+                {% endif %}
+            </div>
             
             <div class="mt-auto">
                 <p class="fw-bold mb-2">Para usuarios de Excel:</p>
